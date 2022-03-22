@@ -4,6 +4,7 @@ automation-api-docs*.md
 /build/
 !gradle/wrapper/gradle-wrapper.jar
 **/bin/
+target
 
 ### STS ###
 .apt_generated

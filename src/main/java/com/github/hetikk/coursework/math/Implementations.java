@@ -8,15 +8,18 @@ public class Implementations {
 
     public static CalculationOutput method1(CalculationInput input) {
         long time = -System.currentTimeMillis();
-        double s = 0;
 
-        for (int i = 1; i < input.n; i++)
-            s += f(input.func, input.a + input.h * i);
+        double width = (input.b - input.a) / input.n;
 
-        s = input.h * ((f(input.func, input.a) + f(input.func, input.b)) / 2 + s);
+        double trapezoidal_integral = 0;
+        for (int step = 0; step < input.n; step++) {
+            double x1 = input.a + step * width;
+            double x2 = input.a + (step + 1) * width;
+            trapezoidal_integral += 0.5 * (x2 - x1) * (f(input.func, x1) + f(input.func, x2));
+        }
+
         time += System.currentTimeMillis();
-
-        return new CalculationOutput(s, time);
+        return new CalculationOutput(trapezoidal_integral, time);
     }
 
     public static CalculationOutput method2(CalculationInput input) {

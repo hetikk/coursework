@@ -8,7 +8,6 @@ import net.objecthunter.exp4j.ExpressionBuilder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.DoubleStream;
@@ -44,7 +43,6 @@ public class Implementations {
         while (start < input.n) {
             start += d;
             if (start > input.n) start = input.n;
-            System.out.printf("[%d - %d]\n", tmpStart, start);
 
             int finalTmpStart = tmpStart;
             int finalStart = start;
@@ -56,6 +54,7 @@ public class Implementations {
                     double x2 = input.a + (step + 1) * width;
                     res += 0.5 * (x2 - x1) * (f(input.func, x1) + f(input.func, x2));
                 }
+                System.out.printf("[%d - %d] = %.4f\n", finalTmpStart, finalStart, res);
                 return res;
             });
 
@@ -74,7 +73,7 @@ public class Implementations {
                 })
                 .flatMapToDouble(DoubleStream::of)
                 .sum();
-
+        System.out.println("\nf = " + trapezoidal_integral);
         time += System.currentTimeMillis();
         return new CalculationOutput(trapezoidal_integral, time);
     }

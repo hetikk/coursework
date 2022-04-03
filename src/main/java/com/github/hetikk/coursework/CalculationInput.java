@@ -7,5 +7,6 @@ public class CalculationInput {
     public double b;
     public int n;
     public double h;
+    public int threadCount;
 
 }

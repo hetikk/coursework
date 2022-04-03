@@ -26,7 +26,7 @@ public class Controller {
     private TextField integrationUpperLimit;
 
     @FXML
-    private TextField partitionsNumber;
+    private TextField threadCount;
 
     @FXML
     private ChoiceBox<String> methodChoicer;
@@ -48,10 +48,11 @@ public class Controller {
     public Controller() {
         availableMethods = new LinkedHashMap<String, Function<CalculationInput, CalculationOutput>>() {{
             put("Метод трапеций", Implementations::method1);
-            put("Метод левых прямоугольников", Implementations::method2);
-            put("Метод правых прямоугольников", Implementations::method3);
-            put("Метод средних прямоугольников", Implementations::method4);
-            put("Метод Симсона", Implementations::method5);
+            put("Метод трапеций (многопоточный)", Implementations::method1_multithreaded);
+//            put("Метод левых прямоугольников", Implementations::method2);
+//            put("Метод правых прямоугольников", Implementations::method3);
+//            put("Метод средних прямоугольников", Implementations::method4);
+//            put("Метод Симсона", Implementations::method5);
         }};
     }
 
@@ -61,18 +62,19 @@ public class Controller {
         methodChoicer.setItems(FXCollections.observableList(new ArrayList<>(availableMethods.keySet())));
         String defaultMethod = availableMethods.keySet().stream().findFirst().get();
         methodChoicer.setValue(defaultMethod);
+        threadCount.setText(Runtime.getRuntime().availableProcessors() + "");
 
         calculate.setOnAction(event -> {
             boolean funcIsValid = !function.getText().trim().isEmpty();
             boolean aIsValid = integrationLowerLimit.getText().trim().matches("-?[0-9]+([.,][0-9]+)?");
             boolean bIsValid = integrationUpperLimit.getText().trim().matches("-?[0-9]+([.,][0-9]+)?");
-            boolean nIsValid = partitionsNumber.getText().trim().matches("[0-9]+");
+            boolean threadCountIsValid = threadCount.getText().trim().matches("[0-9]+");
 
-            if (!(funcIsValid && aIsValid && bIsValid && nIsValid)) {
+            if (!(funcIsValid && aIsValid && bIsValid && threadCountIsValid)) {
                 function.setStyle("-fx-border-color: " + (funcIsValid ? "#C4C4C4" : "red"));
                 integrationLowerLimit.setStyle("-fx-border-color: " + (aIsValid ? "#C4C4C4" : "red"));
                 integrationUpperLimit.setStyle("-fx-border-color: " + (bIsValid ? "#C4C4C4" : "red"));
-                partitionsNumber.setStyle("-fx-border-color: " + (nIsValid ? "#C4C4C4" : "red"));
+                threadCount.setStyle("-fx-border-color: " + (threadCountIsValid ? "#C4C4C4" : "red"));
                 alert(Alert.AlertType.ERROR,
                         "Ошибка",
                         null,
@@ -83,14 +85,15 @@ public class Controller {
             function.setStyle("-fx-border-color: #C4C4C4");
             integrationLowerLimit.setStyle("-fx-border-color: #C4C4C4");
             integrationUpperLimit.setStyle("-fx-border-color: #C4C4C4");
-            partitionsNumber.setStyle("-fx-border-color: #C4C4C4");
+            threadCount.setStyle("-fx-border-color: #C4C4C4");
 
             CalculationInput input = new CalculationInput();
             input.func = function.getText().trim();
             input.a = Double.parseDouble(integrationLowerLimit.getText().trim().replace(",", "."));
             input.b = Double.parseDouble(integrationUpperLimit.getText().trim().replace(",", "."));
-            input.n = Integer.parseInt(partitionsNumber.getText().trim());
+            input.n = 100;
             input.h = (input.b - input.a) / input.n;
+            input.threadCount = Integer.parseInt(threadCount.getText());
 
             String selectedItem = methodChoicer.getSelectionModel().getSelectedItem();
             CalculationOutput output = availableMethods.get(selectedItem).apply(input);

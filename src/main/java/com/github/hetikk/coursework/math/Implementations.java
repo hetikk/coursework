@@ -2,7 +2,16 @@ package com.github.hetikk.coursework.math;
 
 import com.github.hetikk.coursework.CalculationInput;
 import com.github.hetikk.coursework.CalculationOutput;
+import lombok.SneakyThrows;
 import net.objecthunter.exp4j.ExpressionBuilder;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.stream.DoubleStream;
 
 public class Implementations {
 
@@ -17,6 +26,54 @@ public class Implementations {
             double x2 = input.a + (step + 1) * width;
             trapezoidal_integral += 0.5 * (x2 - x1) * (f(input.func, x1) + f(input.func, x2));
         }
+
+        time += System.currentTimeMillis();
+        return new CalculationOutput(trapezoidal_integral, time);
+    }
+
+    @SneakyThrows
+    public static CalculationOutput method1_multithreaded(CalculationInput input) {
+        long time = -System.currentTimeMillis();
+
+        final double width = (input.b - input.a) / input.n;
+
+        List<Callable<Double>> callables = new ArrayList<>();
+
+        int d = input.n < input.threadCount ? input.n : input.n / input.threadCount;
+        int start = 0, tmpStart = 0;
+        while (start < input.n) {
+            start += d;
+            if (start > input.n) start = input.n;
+            System.out.printf("[%d - %d]\n", tmpStart, start);
+
+            int finalTmpStart = tmpStart;
+            int finalStart = start;
+
+            callables.add(() -> {
+                double res = 0;
+                for (int step = finalTmpStart; step < finalStart; step++) {
+                    double x1 = input.a + step * width;
+                    double x2 = input.a + (step + 1) * width;
+                    res += 0.5 * (x2 - x1) * (f(input.func, x1) + f(input.func, x2));
+                }
+                return res;
+            });
+
+            tmpStart = start;
+        }
+
+        ExecutorService executor = Executors.newFixedThreadPool(input.threadCount);
+        double trapezoidal_integral = executor.invokeAll(callables)
+                .stream()
+                .map(future -> {
+                    try {
+                        return future.get();
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                })
+                .flatMapToDouble(DoubleStream::of)
+                .sum();
 
         time += System.currentTimeMillis();
         return new CalculationOutput(trapezoidal_integral, time);

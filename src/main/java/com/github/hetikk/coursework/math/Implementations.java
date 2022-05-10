@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import net.objecthunter.exp4j.ExpressionBuilder;
 
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
 
@@ -43,9 +44,8 @@ public class Implementations {
     public static CalculationOutput method1_multithreaded(CalculationInput input) {
         long time = -System.currentTimeMillis();
 
-
+        WaitGroup waitGroup = new WaitGroup();
         BARRIER = new CyclicBarrier(input.threadCount, System.out::println);
-        DOWN_LATCH = new CountDownLatch(20);
         AtomicDouble globalRes = new AtomicDouble(0.0);
 
         int d = input.n < input.threadCount ? input.n : input.n / input.threadCount;
@@ -58,14 +58,15 @@ public class Implementations {
             int finalTmpStart = tmpStart;
             int finalStart = start;
 
-            new Thread(new Worker(input, finalTmpStart, finalStart, globalRes), "thread-" + (threadId++)).start();
+            waitGroup.add(1);
+            new Thread(new Worker(waitGroup, threadId, input, finalTmpStart, finalStart, globalRes), "thread-" + (threadId++)).start();
 
             tmpStart = start;
         }
 
-        while (DOWN_LATCH.getCount() != 0) //Проверяем, собрались ли все автомобили
-            Thread.sleep(100);
-        double res = input.h * ((f(input.func, input.a) + f(input.func, input.b)) / 2 + globalRes.get());
+        waitGroup.await();
+
+        double res = res(input, globalRes.get());
 
         time += System.currentTimeMillis();
         return new CalculationOutput(res, time);
@@ -137,9 +138,15 @@ public class Implementations {
                 .evaluate();
     }
 
-    @RequiredArgsConstructor
-    public static class Worker implements Runnable {
+    public static double res(CalculationInput input, double res) {
+        return input.h * ((f(input.func, input.a) + f(input.func, input.b)) / 2 + res);
+    }
 
+    @RequiredArgsConstructor
+    public static class Worker implements Runnable, Callable<Double> {
+
+        private final WaitGroup waitGroup;
+        private final int threadId;
         private final CalculationInput input;
         private final int localA;
         private final int localB;
@@ -154,22 +161,42 @@ public class Implementations {
 
             for (int i = localA; i < localB; i++) {
                 if ((++currentStep) == step) {
-                    System.out.printf("%s [%d - %d; %d] = %.4f\n", Thread.currentThread().getName(), localA, localB, i, res);
-                    synchronized (DOWN_LATCH) {
-                        DOWN_LATCH.countDown();
+                    currentStep = 0;
+                    System.out.printf("thread-%d [%d - %d; %d] = %.4f\n", threadId, localA, localB, i, res(input, res));
+                    BARRIER.await();
+                }
+                res += f(input.func, input.a + input.h * i);
+            }
+            globalRes.addAndGet(res);
+
+            waitGroup.done();
+        }
+
+        @Override
+        public Double call() throws Exception {
+            double res = 0;
+
+            int step = 5, currentStep = 0;
+
+            for (int i = localA; i < localB; i++) {
+                if ((++currentStep) == step) {
+                    System.out.printf("thread-%d [%d - %d; %d] = %.4f\n", threadId, localA, localB, i, res);
+//                    synchronized (DOWN_LATCH) {
+//                        DOWN_LATCH.countDown();
 //                        if (DOWN_LATCH.getCount() % 4 == 0) {
 //                            System.out.println();
 //                        }
-                    }
+//                    }
+                    BARRIER.await();
                     currentStep = 0;
                 }
                 res += f(input.func, input.a + input.h * i);
             }
             globalRes.addAndGet(res);
 
-            DOWN_LATCH.await();
+//            DOWN_LATCH.await();
+            return res;
         }
-
     }
 
 }

@@ -7,19 +7,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import net.objecthunter.exp4j.ExpressionBuilder;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.function.BiFunction;
-import java.util.stream.DoubleStream;
 
 public class Implementations {
 
     private static CyclicBarrier BARRIER;
-    private static CyclicBarrier BARRIER;
+    private static CountDownLatch DOWN_LATCH;
 
     public static CalculationOutput method1(CalculationInput input) {
         long time = -System.currentTimeMillis();
@@ -50,12 +44,8 @@ public class Implementations {
         long time = -System.currentTimeMillis();
 
 
-        BARRIER = new CyclicBarrier(input.threadCount, () -> {
-            System.out.println();
-        });
-        BARRIER = new CyclicBarrier(input.threadCount, () -> {
-            System.out.println();
-        });
+        BARRIER = new CyclicBarrier(input.threadCount, System.out::println);
+        DOWN_LATCH = new CountDownLatch(20);
         AtomicDouble globalRes = new AtomicDouble(0.0);
 
         int d = input.n < input.threadCount ? input.n : input.n / input.threadCount;
@@ -73,6 +63,8 @@ public class Implementations {
             tmpStart = start;
         }
 
+        while (DOWN_LATCH.getCount() != 0) //Проверяем, собрались ли все автомобили
+            Thread.sleep(100);
         double res = input.h * ((f(input.func, input.a) + f(input.func, input.b)) / 2 + globalRes.get());
 
         time += System.currentTimeMillis();
@@ -163,14 +155,15 @@ public class Implementations {
             for (int i = localA; i < localB; i++) {
                 if ((++currentStep) == step) {
                     System.out.printf("%s [%d - %d; %d] = %.4f\n", Thread.currentThread().getName(), localA, localB, i, res);
-                    BARRIER.await();
+                    DOWN_LATCH.countDown();
+                    DOWN_LATCH.await();
                     currentStep = 0;
                 }
                 res += f(input.func, input.a + input.h * i);
             }
             globalRes.addAndGet(res);
 
-            BARRIER.await();
+//            BARRIER.await();
         }
 
     }

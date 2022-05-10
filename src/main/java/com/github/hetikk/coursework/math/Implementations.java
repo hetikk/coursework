@@ -2,44 +2,65 @@ package com.github.hetikk.coursework.math;
 
 import com.github.hetikk.coursework.CalculationInput;
 import com.github.hetikk.coursework.CalculationOutput;
+import com.google.common.util.concurrent.AtomicDouble;
+import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import net.objecthunter.exp4j.ExpressionBuilder;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.BiFunction;
 import java.util.stream.DoubleStream;
 
 public class Implementations {
 
+    private static CyclicBarrier BARRIER;
+    private static CyclicBarrier BARRIER;
+
     public static CalculationOutput method1(CalculationInput input) {
         long time = -System.currentTimeMillis();
 
-        double width = (input.b - input.a) / input.n;
+//        double width = (input.b - input.a) / input.n;
+//
+//        double trapezoidal_integral = 0;
+//        for (int step = 0; step < input.n; step++) {
+//            double x1 = input.a + step * width;
+//            double x2 = input.a + (step + 1) * width;
+//            trapezoidal_integral += 0.5 * (x2 - x1) * (f(input.func, x1) + f(input.func, x2));
+//        }
 
-        double trapezoidal_integral = 0;
-        for (int step = 0; step < input.n; step++) {
-            double x1 = input.a + step * width;
-            double x2 = input.a + (step + 1) * width;
-            trapezoidal_integral += 0.5 * (x2 - x1) * (f(input.func, x1) + f(input.func, x2));
-        }
+        double s = 0;
+
+        for (int i = 1; i < input.n; i++)
+            s += f(input.func, input.a + input.h * i);
+
+        s = input.h * ((f(input.func, input.a) + f(input.func, input.b)) / 2 + s);
+        time += System.currentTimeMillis();
 
         time += System.currentTimeMillis();
-        return new CalculationOutput(trapezoidal_integral, time);
+        return new CalculationOutput(s, time);
     }
 
     @SneakyThrows
     public static CalculationOutput method1_multithreaded(CalculationInput input) {
         long time = -System.currentTimeMillis();
 
-        final double width = (input.b - input.a) / input.n;
 
-        List<Callable<Double>> callables = new ArrayList<>();
+        BARRIER = new CyclicBarrier(input.threadCount, () -> {
+            System.out.println();
+        });
+        BARRIER = new CyclicBarrier(input.threadCount, () -> {
+            System.out.println();
+        });
+        AtomicDouble globalRes = new AtomicDouble(0.0);
 
         int d = input.n < input.threadCount ? input.n : input.n / input.threadCount;
         int start = 0, tmpStart = 0;
+        int threadId = 0;
         while (start < input.n) {
             start += d;
             if (start > input.n) start = input.n;
@@ -47,35 +68,15 @@ public class Implementations {
             int finalTmpStart = tmpStart;
             int finalStart = start;
 
-            callables.add(() -> {
-                double res = 0;
-                for (int step = finalTmpStart; step < finalStart; step++) {
-                    double x1 = input.a + step * width;
-                    double x2 = input.a + (step + 1) * width;
-                    res += 0.5 * (x2 - x1) * (f(input.func, x1) + f(input.func, x2));
-                }
-                System.out.printf("[%d - %d] = %.4f\n", finalTmpStart, finalStart, res);
-                return res;
-            });
+            new Thread(new Worker(input, finalTmpStart, finalStart, globalRes), "thread-" + (threadId++)).start();
 
             tmpStart = start;
         }
 
-        ExecutorService executor = Executors.newFixedThreadPool(input.threadCount);
-        double trapezoidal_integral = executor.invokeAll(callables)
-                .stream()
-                .map(future -> {
-                    try {
-                        return future.get();
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-                    }
-                })
-                .flatMapToDouble(DoubleStream::of)
-                .sum();
-        System.out.println("\nf = " + trapezoidal_integral);
+        double res = input.h * ((f(input.func, input.a) + f(input.func, input.b)) / 2 + globalRes.get());
+
         time += System.currentTimeMillis();
-        return new CalculationOutput(trapezoidal_integral, time);
+        return new CalculationOutput(res, time);
     }
 
     public static CalculationOutput method2(CalculationInput input) {
@@ -142,6 +143,36 @@ public class Implementations {
                 .build()
                 .setVariable("x", x)
                 .evaluate();
+    }
+
+    @RequiredArgsConstructor
+    public static class Worker implements Runnable {
+
+        private final CalculationInput input;
+        private final int localA;
+        private final int localB;
+        private final AtomicDouble globalRes;
+
+        @Override
+        @SneakyThrows
+        public void run() {
+            double res = 0;
+
+            int step = 5, currentStep = 0;
+
+            for (int i = localA; i < localB; i++) {
+                if ((++currentStep) == step) {
+                    System.out.printf("%s [%d - %d; %d] = %.4f\n", Thread.currentThread().getName(), localA, localB, i, res);
+                    BARRIER.await();
+                    currentStep = 0;
+                }
+                res += f(input.func, input.a + input.h * i);
+            }
+            globalRes.addAndGet(res);
+
+            BARRIER.await();
+        }
+
     }
 
 }

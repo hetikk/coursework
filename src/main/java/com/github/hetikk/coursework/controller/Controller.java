@@ -47,8 +47,8 @@ public class Controller {
 
     public Controller() {
         availableMethods = new LinkedHashMap<String, Function<CalculationInput, CalculationOutput>>() {{
-            put("Метод трапеций", Implementations::method1);
             put("Метод трапеций (многопоточный)", Implementations::method1_multithreaded);
+            put("Метод трапеций", Implementations::method1);
 //            put("Метод левых прямоугольников", Implementations::method2);
 //            put("Метод правых прямоугольников", Implementations::method3);
 //            put("Метод средних прямоугольников", Implementations::method4);
@@ -62,7 +62,7 @@ public class Controller {
         methodChoicer.setItems(FXCollections.observableList(new ArrayList<>(availableMethods.keySet())));
         String defaultMethod = availableMethods.keySet().stream().findFirst().get();
         methodChoicer.setValue(defaultMethod);
-        threadCount.setText(Runtime.getRuntime().availableProcessors() + "");
+//        threadCount.setText(Runtime.getRuntime().availableProcessors() + "");
 
         calculate.setOnAction(event -> {
             boolean funcIsValid = !function.getText().trim().isEmpty();

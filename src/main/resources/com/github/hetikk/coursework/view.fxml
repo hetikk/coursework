@@ -26,10 +26,10 @@
                 <Font name="Verdana" size="12.0" />
             </font>
         </Label>
-        <TextField fx:id="function" layoutX="179.0" layoutY="50.0" prefHeight="25.0" prefWidth="209.0" text="exp((-x)^2)" />
+        <TextField fx:id="function" layoutX="179.0" layoutY="50.0" prefHeight="25.0" prefWidth="209.0" text="sin(x)" />
         <TextField fx:id="integrationLowerLimit" layoutX="320.0" layoutY="90.0" prefHeight="25.0" prefWidth="70.0" text="0" />
-        <TextField fx:id="integrationUpperLimit" layoutX="320.0" layoutY="125.0" prefHeight="25.0" prefWidth="70.0" text="1" />
-        <TextField fx:id="threadCount" layoutX="236.0" layoutY="160.0" prefHeight="25.0" prefWidth="61.0" />
+        <TextField fx:id="integrationUpperLimit" layoutX="320.0" layoutY="125.0" prefHeight="25.0" prefWidth="70.0" text="4" />
+        <TextField fx:id="threadCount" layoutX="236.0" layoutY="160.0" prefHeight="25.0" prefWidth="61.0" text="4" />
         <Button fx:id="calculate" layoutX="45.0" layoutY="246.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="344.0" style="-fx-background-color: #2E3348;" text="Рассчитать" textFill="#fafafa">
             <font>
                 <Font name="Verdana" size="12.0" />

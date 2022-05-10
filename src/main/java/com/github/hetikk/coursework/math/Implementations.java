@@ -155,15 +155,19 @@ public class Implementations {
             for (int i = localA; i < localB; i++) {
                 if ((++currentStep) == step) {
                     System.out.printf("%s [%d - %d; %d] = %.4f\n", Thread.currentThread().getName(), localA, localB, i, res);
-                    DOWN_LATCH.countDown();
-                    DOWN_LATCH.await();
+                    synchronized (DOWN_LATCH) {
+                        DOWN_LATCH.countDown();
+//                        if (DOWN_LATCH.getCount() % 4 == 0) {
+//                            System.out.println();
+//                        }
+                    }
                     currentStep = 0;
                 }
                 res += f(input.func, input.a + input.h * i);
             }
             globalRes.addAndGet(res);
 
-//            BARRIER.await();
+            DOWN_LATCH.await();
         }
 
     }
